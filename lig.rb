@@ -56,7 +56,6 @@ module LingrIRCGateway
       @show_time = realname =~ /time/
       
       @lingr = Lingr::Connection.new(@user, @password)
-      socket = @socket
 
       @lingr.connected_hooks << lambda do |sender|
         begin
