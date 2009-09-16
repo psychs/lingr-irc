@@ -1,0 +1,26 @@
+= lingr.rb
+
+* lingr.rb
+
+Lingr client library.
+
+* lig.rb
+
+Lingr IRC gateway.
+
+== Usage:
+
+$ ruby lig.rb
+
+Connect to the local service with your IRC client.
+
+IRC account settings:
+
+Host: localhost
+Port: 26667
+Username: Your Lingr account name
+Password: Your Lingr password
+
+If you want to see back logs in a room, specify below.
+
+Realname: backlog
