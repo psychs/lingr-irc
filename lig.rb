@@ -180,27 +180,5 @@ module LingrIRCGateway
 end
 
 
-if __FILE__ == $0
-  def daemonize(debug=false)
-    return yield if $DEBUG || debug
-    Process.fork do
-    Process.setsid
-    Dir.chdir "/"
-    trap("SIGINT")  { exit! 0 }
-    trap("SIGTERM") { exit! 0 }
-    trap("SIGHUP")  { exit! 0 }
-    File.open("/dev/null") do |f|
-    	STDIN.reopen  f
-    	STDOUT.reopen f
-    	STDERR.reopen f
-    end
-    yield
-    end
-    exit! 0
-  end
-
-  daemonize do
-    c = LingrIRCGateway::Server.new(26667)
-    c.start
-  end
-end
+c = LingrIRCGateway::Server.new(26667)
+c.start
