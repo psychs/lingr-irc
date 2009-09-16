@@ -138,8 +138,6 @@ module LingrIRCGateway
     end
     
     def on_whois(param)
-      puts "WHOIS #{param}"
-      
       nick = param.split(' ')[0]
       
       rooms = []
