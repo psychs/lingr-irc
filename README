@@ -14,13 +14,13 @@ $ ruby lig.rb
 
 Connect to the local service with your IRC client.
 
-IRC account settings:
+IRC client settings:
 
-Host: localhost
-Port: 26667
-Username: Your Lingr account name
-Password: Your Lingr password
+    Host: localhost
+    Port: 26667
+    Username: Your Lingr account name
+    Password: Your Lingr password
 
-If you want to see back logs in a room, specify below.
+If you want to see back logs in a room, specify as below.
 
-Realname: backlog
+    Realname: backlog
