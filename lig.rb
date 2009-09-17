@@ -179,5 +179,7 @@ module LingrIRCGateway
 end
 
 
-c = LingrIRCGateway::Server.new(26667)
-c.start
+if __FILE__ == $0
+  c = LingrIRCGateway::Server.new(26667)
+  c.start
+end
