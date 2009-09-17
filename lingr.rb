@@ -284,26 +284,25 @@ module Lingr
               m.decide_mine(@public_id)
               @message_hooks.each {|h| h.call(self, room, m) }
             end
-          elsif d = event["online"]
+          elsif d = event["presence"]
             if room = @rooms[d["room"]]
               username = d["username"]
               id = d["public_session_id"]
-              first = false
-              unless m = room.members[username]
-                m = Member.new(d)
-                room.add_member(m)
-                first = true
-              end
-              m.add_session(id)
-              @join_hooks.each {|h| h.call(self, room, m, first) }
-            end
-          elsif d = event["offline"]
-            if room = @rooms[d["room"]]
-              username = d["username"]
-              id = d["public_session_id"]
-              if m = room.members[username]
-                m.remove_session(id)
-                @leave_hooks.each {|h| h.call(self, room, m) }
+              if status = d["status"]
+                case status
+                when "online"
+                  first = false
+                  unless m = room.members[username]
+                    m = Member.new(d)
+                    room.add_member(m)
+                    first = true
+                  end
+                  m.add_session(id)
+                  @join_hooks.each {|h| h.call(self, room, m, first) }
+                when "offline"
+                  m.remove_session(id)
+                  @leave_hooks.each {|h| h.call(self, room, m) }
+                end
               end
             end
           end
