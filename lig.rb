@@ -3,34 +3,45 @@
 # You can redistribute it and/or modify it under the Ruby's license or the GPL2.
 
 require 'socket'
+require 'logger'
 require File.dirname(__FILE__) + '/lingr.rb'
 
 
 module LingrIRCGateway
   
   class Server
-    def initialize(port)
+    def initialize(port, logger=nil)
       @port = port
+      @logger = logger
     end
 
     def start
       @server = TCPServer.open(@port)
+      log { "started Lingr IRC gateway at localhost:#{@port}" }
       loop do
-        Client.new(@server.accept)
+        Client.new(@server.accept, @logger)
+        log { "accepted an IRC client" }
       end
+    end
+    
+    def log(&block)
+      @logger.info(&block) if @logger
     end
   end
   
   
   class Client
-    def initialize(socket)
+    def initialize(socket, logger=nil)
       @socket = socket
+      @logger = logger
       process
     end
     
     def process
       while line = @socket.gets
-        case line.chomp
+        line.chomp!
+        log { "received from IRC client: #{line}" }
+        case line
         when /^PASS\s+/i
           @password = $~.post_match
         when /^NICK\s+/i
@@ -55,10 +66,14 @@ module LingrIRCGateway
       @show_backlog = realname =~ /backlog/
       @show_time = realname =~ /time/
       
-      @lingr = Lingr::Connection.new(@user, @password)
+      log { "connecting to Lingr: #{@user}" }
+      
+      @lingr = Lingr::Connection.new(@user, @password, true, @logger)
 
       @lingr.connected_hooks << lambda do |sender|
         begin
+          log { "connected to Lingr" }
+          
           reply(1, ":Welcome to Lingr!")
           reply(376, ":End of MOTD.")
 
@@ -82,36 +97,38 @@ module LingrIRCGateway
             room.backlog.clear
           end
         rescue => e
-          p e
+          log_error { "gateway exception in connected event: #{e.inspect}" }
         end
       end
 
       @lingr.error_hooks << lambda do |sender, error|
         begin
-          p error
+          log { "received error from Lingr: #{error.inspect}" }
           send(%Q|ERROR :Closing Link: #{@user}!#{@user}@lingr.com ("#{error.inspect}")|)
         rescue => e
-          p e
+          log_error { "gateway exception in error event: #{e.inspect}" }
         end
       end
 
       @lingr.message_hooks << lambda do |sender, room, message|
         begin
+          log { "received message from Lingr: #{room.id} #{message.inspect}" }
           unless message.mine
             send_text(message, room, "PRIVMSG")
           end
         rescue => e
-          p e
+          log_error { "gateway exception in message event: #{e.inspect}" }
         end
       end
 
       @lingr.join_hooks << lambda do |sender, room, member, first|
         begin
+          log { "received join from Lingr: #{room.id} #{member.username}" }
           if first
             send("#{user_prefix(member.username)} JOIN ##{room.id}")
           end
         rescue => e
-          p e
+          log_error { "gateway exception in join event: #{e.inspect}" }
         end
       end
 
@@ -119,7 +136,7 @@ module LingrIRCGateway
         begin
           @lingr.start
         rescue Lingr::Error => e
-          p e
+          log_error { "Lingr connection exception: #{e.inspect}" }
         end
       end
     end
@@ -184,12 +201,22 @@ module LingrIRCGateway
       ":#{user}!#{user}@lingr.com"
     end
     
+    def log(&block)
+      @logger.info(&block) if @logger
+    end
+    
+    def log_error(&block)
+      @logger.error(&block) if @logger
+    end
+    
   end
   
 end
 
 
 if __FILE__ == $0
-  c = LingrIRCGateway::Server.new(26667)
+  logger = nil
+  #logger = Logger.new(STDERR)
+  c = LingrIRCGateway::Server.new(26667, logger)
   c.start
 end

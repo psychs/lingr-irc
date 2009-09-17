@@ -2,8 +2,11 @@
 # Created by Satoshi Nakagawa.
 # You can redistribute it and/or modify it under the Ruby's license or the GPL2.
 
+require 'net/http'
 require 'open-uri'
 require 'cgi'
+require 'logger'
+require 'timeout'
 require 'rubygems'
 require 'json'
 
@@ -130,6 +133,7 @@ module Lingr
 
     URL_BASE = "http://lingr.com/api/"
     URL_BASE_OBSERVE = "http://lingr.com:8080/api/"
+    REQUEST_TIMEOUT = 100
     RETRY_INTERVAL = 60
     
     attr_reader :user, :password, :auto_reconnect
@@ -137,10 +141,11 @@ module Lingr
     attr_reader :room_ids, :rooms
     attr_reader :connected_hooks, :error_hooks, :message_hooks, :join_hooks, :leave_hooks
     
-    def initialize(user, password, auto_reconnect=true)
+    def initialize(user, password, auto_reconnect=true, logger=nil)
       @user = user
       @password = password
       @auto_reconnect = auto_reconnect
+      @logger = logger
       @connected_hooks = []
       @error_hooks = []
       @message_hooks = []
@@ -170,11 +175,16 @@ module Lingr
       rescue OpenURI::HTTPError  => e
         on_error(e)
         retry if auto_reconnect
+      rescue TimeoutError => e
+        on_error(e)
+        retry if auto_reconnect
       end
     end
 
     def session_create
-      res = send_request("session/create", :user => @user, :password => @password)
+      debug { "requesting session/create: #{@user}" }
+      res = post("session/create", :user => @user, :password => @password)
+      debug { "session/create response: #{res.inspect}" }
       @session = res["session"]
       @nickname = res["nickname"]
       @public_id = res["public_id"]
@@ -188,7 +198,9 @@ module Lingr
     end
 
     def destroy_session
-      send_request("session/destroy", :session => @session)
+      debug { "requesting session/destroy_session" }
+      res = post("session/destroy", :session => @session)
+      debug { "session/destroy response: #{res.inspect}" }
       @session = nil
       @nickname = nil
       @public_id = nil
@@ -196,23 +208,32 @@ module Lingr
       @name = nil
       @username = nil
       @rooms = {}
-    rescue Error => e
-    rescue JSON::ParserError => e
-    rescue OpenURI::HTTPError  => e
+      res
+    rescue Error
+    rescue JSON::ParserError
+    rescue OpenURI::HTTPError
+    rescue TimeoutError
     end
     
     def set_presence(presence)
-      send_request("session/set_presence", :session => @session, :presence => presence, :nickname => @nickname)
+      debug { "requesting session/set_presence: #{presence}" }
+      res = post("session/set_presence", :session => @session, :presence => presence, :nickname => @nickname)
+      debug { "session/set_presence response: #{res.inspect}" }
+      res
     end
 
     def get_rooms
-      res = send_request("user/get_rooms", :session => @session)
+      debug { "requesting user/response" }
+      res = get("user/get_rooms", :session => @session)
+      debug { "user/get_rooms response: #{res.inspect}" }
       @room_ids = res["rooms"]
       res
     end
 
     def show_room(room_id)
-      res = send_request("room/show", :session => @session, :room => room_id)
+      debug { "requesting room/show: #{room_id}" }
+      res = get("room/show", :session => @session, :room => room_id)
+      debug { "room/show response: #{res.inspect}" }
       
       if rooms = res["rooms"]
         rooms.each do |d|
@@ -228,22 +249,31 @@ module Lingr
     end
 
     def subscribe(room_id)
-      res = send_request("room/subscribe", :session => @session, :room => room_id)
+      debug { "requesting room/subscribe: #{room_id}" }
+      res = post("room/subscribe", :session => @session, :room => room_id)
+      debug { "room/subscribe response: #{res.inspect}" }
       @counter = res["counter"]
       res
     end
 
     def unsubscribe(room_id)
-      send_request("room/unsubscribe", :session => @session, :room => room_id)
+      debug { "requesting room/unsubscribe: #{room_id}" }
+      res = post("room/unsubscribe", :session => @session, :room => room_id)
+      debug { "room/unsubscribe response: #{res.inspect}" }
+      res
     end
 
     def say(room_id, text)
-      send_request("room/say", :session => @session, :room => room_id, :nickname => @nickname, :text => text)
+      debug { "requesting room/say: #{room_id} #{text}" }
+      res = post("room/say", :session => @session, :room => room_id, :nickname => @nickname, :text => text)
+      debug { "room/say response: #{res.inspect}" }
+      res
     end
 
     def observe
-      res = send_request("event/observe", :session => @session, :counter => @counter)
-      
+      debug { "requesting event/observe: #{@counter}" }
+      res = get("event/observe", :session => @session, :counter => @counter)
+      debug { "observe response: #{res.inspect}" }
       @counter = res["counter"] if res["counter"]
       
       if events = res["events"]
@@ -291,12 +321,9 @@ module Lingr
       sleep RETRY_INTERVAL if auto_reconnect
     end
 
-    def send_request(path, params=nil)
-      if path == "event/observe"
-        url = URL_BASE_OBSERVE
-      else
-        url = URL_BASE
-      end
+    def get(path, params=nil)
+      is_observe = path == "event/observe"
+      url = is_observe ? URL_BASE_OBSERVE : URL_BASE
       url += path
       
       if params
@@ -304,8 +331,19 @@ module Lingr
       end
       
       res = nil
-      open(url) do |r|
-        res = JSON.parse(r.read)
+      begin
+        timeout(REQUEST_TIMEOUT) do
+          open(url) do |r|
+            res = JSON.parse(r.read)
+          end
+        end
+      rescue TimeoutError
+        debug { "get request timed out: #{url}" }
+        if is_observe
+          res = { "status" => "ok" }
+        else
+          raise
+        end
       end
       
       if res["status"] == "ok"
@@ -314,5 +352,45 @@ module Lingr
         raise Error.new(res)
       end
     end
+    
+    def post(path, params=nil)
+      url = URL_BASE + path
+      if params
+        url += '?' + params.map{|k,v| "#{k}=#{CGI.escape(v.to_s)}"}.join('&')
+      end
+      u = URI.parse(url)
+
+      res = nil
+      begin
+        timeout(REQUEST_TIMEOUT) do
+          http = Net::HTTP.new(u.host, u.port)
+          response = http.post(u.path, u.query)
+          res = JSON.parse(response.body)
+        end
+      rescue TimeoutError
+        debug { "post request timed out: #{url}" }
+        raise
+      end
+      
+      if res["status"] == "ok"
+        res
+      else
+        raise Error.new(res)
+      end
+    end
+    
+    def debug(&block)
+      @logger.debug(&block) if @logger
+    end
+    
+    def log(&block)
+      @logger.info(&block) if @logger
+    end
+    
+    def log_error(&block)
+      @logger.error(&block) if @logger
+    end
+    
   end
+  
 end
