@@ -168,16 +168,16 @@ module Lingr
       rescue Error => e
         raise e if e.code == "invalid_user_credentials"
         on_error(e)
-        retry if auto_reconnect
+        retry if @auto_reconnect
       rescue JSON::ParserError => e
         on_error(e)
-        retry if auto_reconnect
+        retry if @auto_reconnect
       rescue OpenURI::HTTPError  => e
         on_error(e)
-        retry if auto_reconnect
+        retry if @auto_reconnect
       rescue TimeoutError => e
         on_error(e)
-        retry if auto_reconnect
+        retry if @auto_reconnect
       end
     end
 
@@ -317,7 +317,7 @@ module Lingr
     def on_error(e)
       destroy_session
       @error_hooks.each {|h| h.call(self, e) }
-      sleep RETRY_INTERVAL if auto_reconnect
+      sleep RETRY_INTERVAL if @auto_reconnect
     end
 
     def get(path, params=nil)
