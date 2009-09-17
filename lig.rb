@@ -76,13 +76,7 @@ module LingrIRCGateway
             # show backlog
             if @show_backlog
               room.backlog.each do |m|
-                s = "#{user_prefix(m.speaker_id)} NOTICE ##{room.id} :#{m.text}"
-                if @show_time
-                  time = m.timestamp
-                  time.localtime
-                  s << " (#{time.strftime('%m/%d %H:%M')})"
-                end
-                send(s)
+                send_text(m, room, "NOTICE")
               end
             end
             room.backlog.clear
@@ -104,7 +98,7 @@ module LingrIRCGateway
       @lingr.message_hooks << lambda do |sender, room, message|
         begin
           unless message.mine
-            send("#{user_prefix(message.speaker_id)} PRIVMSG ##{room.id} :#{message.text}")
+            send_text(message, room, "PRIVMSG")
           end
         rescue => e
           p e
@@ -164,6 +158,22 @@ module LingrIRCGateway
     def reply(num, line)
       s = sprintf(":lingr %03d #{@user} #{line}", num)
       send(s)
+    end
+    
+    def send_text(message, room, cmd)
+      timestr = ""
+      if cmd == "NOTICE"
+        if @show_time
+          time = message.timestamp
+          time.localtime
+          timestr = " (#{time.strftime('%m/%d %H:%M')})"
+        end
+      end
+      
+      lines = message.text.split(/\r?\n/)
+      lines.each do |line|
+        send("#{user_prefix(message.speaker_id)} #{cmd} ##{room.id} :#{line.chomp}#{timestr}")
+      end
     end
     
     def my_prefix
