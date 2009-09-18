@@ -135,7 +135,7 @@ module LingrIRCGateway
       Thread.new do
         begin
           @lingr.start
-        rescue Lingr::Error => e
+        rescue Exception => e
           log_error { "Lingr connection exception: #{e.inspect}" }
         end
       end

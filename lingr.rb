@@ -35,10 +35,6 @@ module Lingr
       @sessions.delete(session)
     end
     
-    def has_session
-      @session.size > 0
-    end
-    
     def inspect
       %Q|<#{self.class} #{username} #{name} #{sessions.size}>|
     end
@@ -300,8 +296,10 @@ module Lingr
                   m.add_session(id)
                   @join_hooks.each {|h| h.call(self, room, m, first) }
                 when "offline"
-                  m.remove_session(id)
-                  @leave_hooks.each {|h| h.call(self, room, m) }
+                  if m = room.members[username]
+                    m.remove_session(id)
+                    @leave_hooks.each {|h| h.call(self, room, m) }
+                  end
                 end
               end
             end
@@ -315,6 +313,7 @@ module Lingr
     private
     
     def on_error(e)
+      log_error { "error: #{e.inspect}" }
       destroy_session
       @error_hooks.each {|h| h.call(self, e) }
       sleep RETRY_INTERVAL if @auto_reconnect
