@@ -19,8 +19,10 @@ module LingrIRCGateway
       @server = TCPServer.open(@port)
       log { "started Lingr IRC gateway at localhost:#{@port}" }
       loop do
-        Client.new(@server.accept, @logger)
-        log { "accepted an IRC client" }
+        c = Client.new(@server.accept, @logger)
+        Thread.new do
+          c.process
+        end
       end
     end
     
@@ -34,7 +36,6 @@ module LingrIRCGateway
     def initialize(socket, logger=nil)
       @socket = socket
       @logger = logger
-      process
     end
     
     def process
@@ -53,8 +54,13 @@ module LingrIRCGateway
           on_privmsg(*s.split(/\s+/, 2))
         when /^WHOIS\s+/i
           on_whois($~.post_match)
+        when /^QUIT/i
+          on_quit
         end
       end
+    rescue => e
+      log_error { "error in IRC client read loop: #{e.inspect}" }
+      terminate
     end
     
     private
@@ -98,6 +104,7 @@ module LingrIRCGateway
           end
         rescue => e
           log_error { "gateway exception in connected event: #{e.inspect}" }
+          terminate
         end
       end
 
@@ -105,8 +112,10 @@ module LingrIRCGateway
         begin
           log { "received error from Lingr: #{error.inspect}" }
           send(%Q|ERROR :Closing Link: #{@user}!#{@user}@lingr.com ("#{error.inspect}")|)
+          terminate
         rescue => e
           log_error { "gateway exception in error event: #{e.inspect}" }
+          terminate
         end
       end
 
@@ -118,6 +127,7 @@ module LingrIRCGateway
           end
         rescue => e
           log_error { "gateway exception in message event: #{e.inspect}" }
+          terminate
         end
       end
 
@@ -129,14 +139,16 @@ module LingrIRCGateway
           end
         rescue => e
           log_error { "gateway exception in join event: #{e.inspect}" }
+          terminate
         end
       end
 
-      Thread.new do
+      @worker = Thread.new do
         begin
           @lingr.start
         rescue Exception => e
           log_error { "Lingr connection exception: #{e.inspect}" }
+          terminate
         end
       end
     end
@@ -166,6 +178,17 @@ module LingrIRCGateway
         reply(312, "#{nick} lingr.com :San Francisco, US")
         reply(318, "#{nick} lingr.com :End of WHOIS list.")
       end
+    end
+    
+    def on_quit
+      send(%Q|ERROR :Closing Link: #{@user}!#{@user}@lingr.com ("Client quit")|)
+      terminate
+    end
+    
+    def terminate
+      @socket.close
+      @worker.terminate
+    rescue Exception
     end
     
     def send(line)

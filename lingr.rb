@@ -111,7 +111,7 @@ module Lingr
   end
   
 
-  class Error < Exception
+  class APIError < Exception
     attr_reader :code, :detail
 
     def initialize(res)
@@ -161,17 +161,11 @@ module Lingr
         loop do
           observe
         end
-      rescue Error => e
+      rescue APIError => e
         raise e if e.code == "invalid_user_credentials"
         on_error(e)
         retry if @auto_reconnect
-      rescue JSON::ParserError => e
-        on_error(e)
-        retry if @auto_reconnect
-      rescue OpenURI::HTTPError  => e
-        on_error(e)
-        retry if @auto_reconnect
-      rescue TimeoutError => e
+      rescue Exception => e
         on_error(e)
         retry if @auto_reconnect
       end
@@ -205,10 +199,8 @@ module Lingr
       @username = nil
       @rooms = {}
       res
-    rescue Error
-    rescue JSON::ParserError
-    rescue OpenURI::HTTPError
-    rescue TimeoutError
+    rescue Exception => e
+      log_error { "error in destroy_session: #{e.inspect}" }
     end
     
     def set_presence(presence)
@@ -347,7 +339,7 @@ module Lingr
       if res["status"] == "ok"
         res
       else
-        raise Error.new(res)
+        raise APIError.new(res)
       end
     end
     
@@ -373,7 +365,7 @@ module Lingr
       if res["status"] == "ok"
         res
       else
-        raise Error.new(res)
+        raise APIError.new(res)
       end
     end
     
