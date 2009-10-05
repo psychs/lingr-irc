@@ -22,17 +22,6 @@ module Lingr
       @icon_url = res["icon_url"]
       @owner = res["owner"]
       @presence = res["presence"]
-      @sessions = []
-    end
-    
-    def add_session(session)
-      unless @sessions.index(session)
-        @sessions << session
-      end
-    end
-    
-    def remove_session(session)
-      @sessions.delete(session)
     end
     
     def inspect
@@ -63,15 +52,6 @@ module Lingr
           members.each do |u|
             m = Member.new(u)
             @members[m.username] = m
-          end
-        end
-        
-        if chatters = roster["chatters"]
-          chatters.each do |c|
-            username = c["username"]
-            if m = @members[username]
-              m.add_session(c["id"])
-            end
           end
         end
       end
@@ -236,9 +216,9 @@ module Lingr
       res
     end
 
-    def subscribe(room_id)
+    def subscribe(room_id, reset=true)
       debug { "requesting room/subscribe: #{room_id}" }
-      res = post("room/subscribe", :session => @session, :room => room_id)
+      res = post("room/subscribe", :session => @session, :room => room_id, :reset => reset.to_s)
       debug { "room/subscribe response: #{res.inspect}" }
       @counter = res["counter"]
       res
@@ -285,11 +265,11 @@ module Lingr
                     room.add_member(m)
                     first = true
                   end
-                  m.add_session(id)
+                  m.presence = status
                   @join_hooks.each {|h| h.call(self, room, m, first) }
                 when "offline"
                   if m = room.members[username]
-                    m.remove_session(id)
+                    m.presence = status
                     @leave_hooks.each {|h| h.call(self, room, m) }
                   end
                 end
