@@ -14,7 +14,7 @@ require 'json'
 module Lingr
 
   class Member
-    attr_reader :username, :name, :icon_url, :owner, :presence, :sessions
+    attr_reader :username, :name, :icon_url, :owner, :presence
     
     def initialize(res)
       @username = res["username"]
@@ -25,7 +25,7 @@ module Lingr
     end
     
     def inspect
-      %Q|<#{self.class} #{username} #{name} #{sessions.size}>|
+      %Q|<#{self.class} #{username} #{name}>|
     end
   end
   
