@@ -131,12 +131,9 @@ module LingrIRCGateway
         end
       end
 
-      @lingr.join_hooks << lambda do |sender, room, member, first|
+      @lingr.join_hooks << lambda do |sender, room, member|
         begin
           log { "received join from Lingr: #{room.id} #{member.username}" }
-          if first
-            send("#{user_prefix(member.username)} JOIN ##{room.id}")
-          end
         rescue => e
           log_error { "gateway exception in join event: #{e.inspect}" }
           terminate

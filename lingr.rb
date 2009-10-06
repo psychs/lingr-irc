@@ -14,14 +14,15 @@ require 'json'
 module Lingr
 
   class Member
-    attr_reader :username, :name, :icon_url, :owner, :presence
+    attr_reader :username, :name, :icon_url, :owner
+    attr_accessor :presence
     
     def initialize(res)
       @username = res["username"]
       @name = res["name"]
       @icon_url = res["icon_url"]
       @owner = res["owner"]
-      @presence = res["presence"]
+      @presence = res["presence"] == "online"
     end
     
     def inspect
@@ -259,17 +260,13 @@ module Lingr
               if status = d["status"]
                 case status
                 when "online"
-                  first = false
-                  unless m = room.members[username]
-                    m = Member.new(d)
-                    room.add_member(m)
-                    first = true
+                  if m = room.members[username]
+                    m.presence = true
+                    @join_hooks.each {|h| h.call(self, room, m) }
                   end
-                  m.presence = status
-                  @join_hooks.each {|h| h.call(self, room, m, first) }
                 when "offline"
                   if m = room.members[username]
-                    m.presence = status
+                    m.presence = false
                     @leave_hooks.each {|h| h.call(self, room, m) }
                   end
                 end
