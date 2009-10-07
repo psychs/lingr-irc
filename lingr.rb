@@ -132,7 +132,7 @@ module Lingr
     
     def start
       begin
-        session_create
+        create_session
         get_rooms
         show_room(@room_ids.join(','))
         subscribe(@room_ids.join(','))
@@ -152,7 +152,7 @@ module Lingr
       end
     end
 
-    def session_create
+    def create_session
       debug { "requesting session/create: #{@user}" }
       res = post("session/create", :user => @user, :password => @password)
       debug { "session/create response: #{res.inspect}" }
@@ -169,7 +169,7 @@ module Lingr
     end
 
     def destroy_session
-      debug { "requesting session/destroy_session" }
+      debug { "requesting session/destroy" }
       res = post("session/destroy", :session => @session)
       debug { "session/destroy response: #{res.inspect}" }
       @session = nil
