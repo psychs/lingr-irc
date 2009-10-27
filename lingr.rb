@@ -44,7 +44,8 @@ module Lingr
       
       if msgs = res["messages"]
         msgs.each do |m|
-          @backlog << Message.new(m["message"])
+          m = m["message"] if m["message"]
+          @backlog << Message.new(m)
         end
       end
       
@@ -206,7 +207,8 @@ module Lingr
       
       if rooms = res["rooms"]
         rooms.each do |d|
-          r = Room.new(d["room"])
+          d = d["room"] if d["room"]
+          r = Room.new(d)
           r.backlog.each do |m|
             m.decide_mine(@public_id)
           end
