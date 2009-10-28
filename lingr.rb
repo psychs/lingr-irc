@@ -26,7 +26,7 @@ module Lingr
     end
     
     def inspect
-      %Q|<#{self.class} #{username} #{name}>|
+      %Q[<#{self.class} #{username} #{name}>]
     end
   end
   
@@ -64,7 +64,7 @@ module Lingr
     end
     
     def inspect
-      %Q|<#{self.class} #{id}>|
+      %Q[<#{self.class} #{id}>]
     end
   end
   
@@ -88,7 +88,7 @@ module Lingr
     end
     
     def inspect
-      %Q|<#{self.class} #{speaker_id}: #{text}>|
+      %Q[<#{self.class} #{speaker_id}: #{text}>]
     end
   end
   
@@ -102,7 +102,7 @@ module Lingr
     end
 
     def inspect
-      %Q|<#{self.class} code="#{@code}", detail="#{@detail}">|
+      %Q[<#{self.class} code="#{@code}", detail="#{@detail}">]
     end
   end
   

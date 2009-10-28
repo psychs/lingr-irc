@@ -111,7 +111,7 @@ module LingrIRCGateway
       @lingr.error_hooks << lambda do |sender, error|
         begin
           log { "received error from Lingr: #{error.inspect}" }
-          send(%Q|ERROR :Closing Link: #{@user}!#{@user}@lingr.com ("#{error.inspect}")|)
+          send(%Q[ERROR :Closing Link: #{@user}!#{@user}@lingr.com ("#{error.inspect}")])
           terminate
         rescue => e
           log_error { "gateway exception in error event: #{e.inspect}" }
@@ -178,7 +178,7 @@ module LingrIRCGateway
     end
     
     def on_quit
-      send(%Q|ERROR :Closing Link: #{@user}!#{@user}@lingr.com ("Client quit")|)
+      send(%Q[ERROR :Closing Link: #{@user}!#{@user}@lingr.com ("Client quit")])
       terminate
     end
     
