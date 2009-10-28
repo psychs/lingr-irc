@@ -44,7 +44,6 @@ module Lingr
       
       if msgs = res["messages"]
         msgs.each do |m|
-          m = m["message"] if m["message"]
           @backlog << Message.new(m)
         end
       end
@@ -207,7 +206,6 @@ module Lingr
       
       if rooms = res["rooms"]
         rooms.each do |d|
-          d = d["room"] if d["room"]
           r = Room.new(d)
           r.backlog.each do |m|
             m.decide_mine(@public_id)
@@ -216,6 +214,13 @@ module Lingr
         end
       end
       
+      res
+    end
+    
+    def get_archives(room_id, max_message_id, limit=100)
+      debug { "requesting room/get_archives: #{room_id} #{max_message_id}" }
+      res = get("room/get_archives", :session => @session, :room => room_id, :before => max_message_id, :limit => limit)
+      debug { "room/get_archives response: #{res.inspect}" }
       res
     end
 
