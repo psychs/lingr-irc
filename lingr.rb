@@ -290,7 +290,7 @@ module Lingr
     
     def on_error(e)
       log_error { "error: #{e.inspect}" }
-      destroy_session
+      destroy_session if @session
       @error_hooks.each {|h| h.call(self, e) }
       sleep RETRY_INTERVAL if @auto_reconnect
     end
