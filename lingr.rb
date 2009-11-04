@@ -146,7 +146,7 @@ module Lingr
         raise e if e.code == "invalid_user_credentials"
         on_error(e)
         retry if @auto_reconnect
-      rescue Exception => e
+      rescue IOError => e
         on_error(e)
         retry if @auto_reconnect
       end
