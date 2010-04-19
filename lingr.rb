@@ -22,7 +22,7 @@ module Lingr
       @name = res["name"]
       @icon_url = res["icon_url"]
       @owner = res["owner"]
-      @presence = res["presence"] == "online"
+      @presence = res["is_online"] == 1
     end
     
     def inspect
