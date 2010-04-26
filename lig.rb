@@ -9,6 +9,9 @@ require File.dirname(__FILE__) + '/lingr.rb'
 
 module LingrIRCGateway
   
+  PRIVMSG = "PRIVMSG"
+  NOTICE = "NOTICE"
+  
   class Server
     def initialize(port, logger=nil)
       @port = port
@@ -97,7 +100,7 @@ module LingrIRCGateway
             # show backlog
             if @show_backlog
               room.backlog.each do |m|
-                send_text(m, room, "NOTICE")
+                send_text(m, room, NOTICE)
               end
             end
             room.backlog.clear
@@ -123,7 +126,7 @@ module LingrIRCGateway
         begin
           log { "received message from Lingr: #{room.id} #{message.inspect}" }
           unless message.mine
-            send_text(message, room, "PRIVMSG")
+            send_text(message, room, PRIVMSG)
           end
         rescue => e
           log_error { "gateway exception in message event: #{e.inspect}" }
@@ -199,7 +202,7 @@ module LingrIRCGateway
     
     def send_text(message, room, cmd)
       timestr = ""
-      if cmd == "NOTICE"
+      if cmd == NOTICE
         if @show_time
           time = message.timestamp
           time.localtime
