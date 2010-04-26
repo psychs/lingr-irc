@@ -12,6 +12,8 @@ require 'json'
 
 
 module Lingr
+  
+  DEFAULT_BACKLOG_COUNT = 30
 
   class Member
     attr_reader :username, :name, :icon_url, :owner
@@ -60,6 +62,12 @@ module Lingr
     
     def add_member(member)
       @members[m.username] = member
+    end
+    
+    def add_backlog(msgs)
+      msgs.reverse_each do |m|
+        @backlog.insert(0, m)
+      end
     end
     
     def inspect
@@ -118,9 +126,10 @@ module Lingr
     attr_reader :room_ids, :rooms
     attr_reader :connected_hooks, :error_hooks, :message_hooks, :join_hooks, :leave_hooks
     
-    def initialize(user, password, auto_reconnect=true, logger=nil)
+    def initialize(user, password, backlog_count, auto_reconnect=true, logger=nil)
       @user = user
       @password = password
+      @backlog_count = backlog_count
       @auto_reconnect = auto_reconnect
       @logger = logger
       @connected_hooks = []
@@ -136,6 +145,17 @@ module Lingr
         get_rooms
         show_room(@room_ids.join(','))
         subscribe(@room_ids.join(','))
+        
+        if @backlog_count > DEFAULT_BACKLOG_COUNT
+          @rooms.each do |room_id, room|
+            if m = room.backlog[0]
+              res = get_archives(room_id, m.id, @backlog_count - DEFAULT_BACKLOG_COUNT)
+              if msgs = res['messages']
+                room.add_backlog(msgs.map {|e| Message.new(e)})
+              end
+            end
+          end
+        end
         
         @connected_hooks.each {|h| h.call(self) }
         
