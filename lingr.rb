@@ -23,7 +23,7 @@ module Lingr
       @username = res["username"]
       @name = res["name"]
       @icon_url = res["icon_url"]
-      @owner = res["owner"]
+      @owner = res["is_owner"]
       @presence = res["is_online"] == 1
     end
     
