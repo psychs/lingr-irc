@@ -126,12 +126,13 @@ module Lingr
     attr_reader :room_ids, :rooms
     attr_reader :connected_hooks, :error_hooks, :message_hooks, :join_hooks, :leave_hooks
     
-    def initialize(user, password, backlog_count, auto_reconnect=true, logger=nil)
+    def initialize(user, password, backlog_count, auto_reconnect=true, logger=nil, api_key=nil)
       @user = user
       @password = password
       @backlog_count = backlog_count
       @auto_reconnect = auto_reconnect
       @logger = logger
+      @api_key = api_key
       @connected_hooks = []
       @error_hooks = []
       @message_hooks = []
@@ -174,7 +175,9 @@ module Lingr
 
     def create_session
       debug { "requesting session/create: #{@user}" }
-      res = post("session/create", :user => @user, :password => @password)
+      params = {:user => @user, :password => @password}
+      params.merge!(:api_key => @api_key) if @api_key
+      res = post("session/create", params)
       debug { "session/create response: #{res.inspect}" }
       @session = res["session"]
       @nickname = res["nickname"]

@@ -13,17 +13,18 @@ module LingrIRCGateway
   NOTICE = "NOTICE"
   
   class Server
-    def initialize(port, backlog_count=30, logger=nil)
+    def initialize(port, backlog_count=30, logger=nil, api_key=nil)
       @port = port
       @backlog_count = backlog_count
       @logger = logger
+      @api_key = api_key
     end
 
     def start
       @server = TCPServer.open(@port)
       log { "started Lingr IRC gateway at localhost:#{@port}" }
       loop do
-        c = Client.new(@server.accept, @backlog_count, @logger)
+        c = Client.new(@server.accept, @backlog_count, @logger, @api_key)
         Thread.new do
           c.process
         end
@@ -37,10 +38,11 @@ module LingrIRCGateway
   
   
   class Client
-    def initialize(socket, backlog_count, logger=nil)
+    def initialize(socket, backlog_count, logger=nil, api_key=nil)
       @socket = socket
       @backlog_count = backlog_count
       @logger = logger
+      @api_key = api_key
     end
     
     def process
@@ -79,7 +81,7 @@ module LingrIRCGateway
       
       log { "connecting to Lingr: #{@user}" }
       
-      @lingr = Lingr::Connection.new(@user, @password, @backlog_count, true, @logger)
+      @lingr = Lingr::Connection.new(@user, @password, @backlog_count, true, @logger, @api_key)
 
       @lingr.connected_hooks << lambda do |sender|
         begin
@@ -243,6 +245,7 @@ if __FILE__ == $0
   backlog_count = 30
   logger = nil
   #logger = Logger.new(STDERR)
-  c = LingrIRCGateway::Server.new(26667, backlog_count, logger)
+  api_key = nil
+  c = LingrIRCGateway::Server.new(26667, backlog_count, logger, api_key)
   c.start
 end
