@@ -193,8 +193,12 @@ module Lingr
 
     def destroy_session
       debug { "requesting session/destroy" }
-      res = post("session/destroy", :session => @session)
-      debug { "session/destroy response: #{res.inspect}" }
+      begin
+        res = post("session/destroy", :session => @session)
+        debug { "session/destroy response: #{res.inspect}" }
+      rescue Exception => e
+        log_error { "error in destroy_session: #{e.inspect}" }
+      end
       @session = nil
       @nickname = nil
       @public_id = nil
@@ -203,8 +207,6 @@ module Lingr
       @username = nil
       @rooms = {}
       res
-    rescue Exception => e
-      log_error { "error in destroy_session: #{e.inspect}" }
     end
     
     def set_presence(presence)
