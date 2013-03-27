@@ -130,7 +130,7 @@ module LingrIRCGateway
         begin
           log { "received message from Lingr: #{room.id} #{message.inspect}" }
           unless message.mine
-            send_text(message, room, PRIVMSG)
+            send_text(message, room, message.type == 'bot' ? NOTICE : PRIVMSG)
           end
         rescue => e
           log_error { "gateway exception in message event: #{e.inspect}" }
