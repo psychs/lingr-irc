@@ -190,6 +190,10 @@ module LingrIRCGateway
       send("PONG #{server}")
     end
     
+    def on_ping(text)
+      send("#{my_prefix} PONG ##{text}")
+    end
+    
     def on_quit
       send(%Q[ERROR :Closing Link: #{@user}!#{@user}@lingr.com ("Client quit")])
       terminate
