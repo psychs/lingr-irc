@@ -61,6 +61,8 @@ module LingrIRCGateway
           on_privmsg(*s.split(/\s+/, 2))
         when /^WHOIS\s+/i
           on_whois($~.post_match)
+        when /^PING\s+/i
+          on_ping($~.post_match)
         when /^QUIT/i
           on_quit
         end
@@ -182,6 +184,10 @@ module LingrIRCGateway
         reply(312, "#{nick} lingr.com :San Francisco, US")
         reply(318, "#{nick} lingr.com :End of WHOIS list.")
       end
+    end
+
+    def on_ping(server)
+      send("PONG #{server}")
     end
     
     def on_quit
